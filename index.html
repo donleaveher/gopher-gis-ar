@@ -19,18 +19,18 @@
   </style>
 </head>
 <body>
-  <!-- Sample model for now. When we have our own GLB, change src and the credit line below
-       (our models need "© OpenStreetMap contributors"). -->
-  <model-viewer src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
-                alt="Sample 3D model of an astronaut"
+  <!-- Hand-made test model from glb_hello. When this becomes real map data, change src and
+       the line below (OSM models need "© OpenStreetMap contributors"). -->
+  <model-viewer src="models/hello.glb"
+                alt="Test model: a maroon block with a gold marker on one corner"
                 ar ar-modes="webxr scene-viewer quick-look"
                 camera-controls shadow-intensity="1">
     <button slot="ar-button" id="ar-button">View in AR</button>
   </model-viewer>
   <footer>
     On a phone, tap "View in AR" to place the model on a table.
-    Sample model: Astronaut by Poly by Google,
-    <a href="https://creativecommons.org/licenses/by/2.0/">CC-BY 2.0</a>.
+    Test model from our exporter: it should be 20 cm wide and lie flat,
+    with the gold marker on its north-east corner.
   </footer>
 </body>
 </html>
