@@ -4,33 +4,321 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gopher GIS AR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono&display=swap">
   <!-- Version pinned on purpose: bump only after re-testing on an iPhone and an Android phone. -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.4.0/model-viewer.min.js"></script>
   <style>
-    html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
-    body { display: flex; flex-direction: column; background: #fff; }
-    model-viewer { flex: 1; width: 100%; min-height: 0; background: #f2f2f2; }
-    #ar-button {
-      position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
-      padding: 12px 24px; border: 0; border-radius: 24px;
-      background: #7a0019; color: #fff; font-size: 16px;
+    /* Look follows Creative Tim UI (shadcn/ui "new-york", neutral base): same color
+       tokens, radius, card, tabs, badge and button, written as plain CSS. */
+    :root {
+      --radius: 0.625rem;
+      --background: oklch(1 0 0);
+      --foreground: oklch(0.145 0 0);
+      --card: oklch(1 0 0);
+      --primary: oklch(0.205 0 0);
+      --primary-foreground: oklch(0.985 0 0);
+      --muted: oklch(0.97 0 0);
+      --muted-foreground: oklch(0.556 0 0);
+      --border: oklch(0.922 0 0);
+      --ring: oklch(0.708 0 0);
+      --surface: oklch(0.98 0 0);
+      --tab-active: var(--background);
+      --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     }
-    footer { padding: 8px 12px; font-size: 12px; color: #555; }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: oklch(0.145 0 0);
+        --foreground: oklch(0.985 0 0);
+        --card: oklch(0.205 0 0);
+        --primary: oklch(0.922 0 0);
+        --primary-foreground: oklch(0.205 0 0);
+        --muted: oklch(0.269 0 0);
+        --muted-foreground: oklch(0.708 0 0);
+        --border: oklch(1 0 0 / 10%);
+        --ring: oklch(0.556 0 0);
+        --surface: oklch(0.2 0 0);
+        --tab-active: oklch(1 0 0 / 12%);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--surface); color: var(--foreground);
+      font: 14px/1.5 Geist, system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+    }
+    /* The grid is on #app, not on body: browser extensions add their own elements to
+       body, and as grid items those pushed the panel and the model into the wrong cells. */
+    #app {
+      display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 24px;
+      height: 100dvh; padding: 24px;
+    }
+    a { color: inherit; text-underline-offset: 4px; }
+    :focus-visible { outline: 3px solid color-mix(in oklch, var(--ring) 50%, transparent); outline-offset: 1px; }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 4px); box-shadow: var(--shadow-sm);
+    }
+
+    #panel {
+      display: flex; flex-direction: column; gap: 24px; padding: 24px;
+      align-self: start; max-height: calc(100dvh - 48px); overflow-y: auto;
+    }
+    #panel header { display: grid; gap: 8px; }
+    .badge {
+      width: fit-content; padding: 2px 8px; border: 1px solid var(--border);
+      border-radius: calc(var(--radius) - 2px); font-size: 12px; font-weight: 500;
+    }
+    h1 { margin: 4px 0 0; font-size: 20px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+    h2 { margin: 0 0 8px; font-size: 14px; font-weight: 500; }
+    .muted { margin: 0; color: var(--muted-foreground); }
+
+    .tabs {
+      display: flex; height: 36px; padding: 3px;
+      background: var(--muted); border-radius: var(--radius);
+    }
+    .tabs button {
+      flex: 1; border: 1px solid transparent; border-radius: calc(var(--radius) - 2px);
+      background: none; color: inherit; font: inherit; font-weight: 500; cursor: pointer;
+    }
+    .tabs button[aria-selected="true"] { background: var(--tab-active); box-shadow: var(--shadow-sm); }
+
+    #facts { margin: 12px 0 0; }
+    #facts div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-top: 1px solid var(--border); }
+    #facts dt { color: var(--muted-foreground); }
+    #facts dd { margin: 0; font-weight: 500; text-align: right; }
+    #facts [hidden] { display: none; }
+    #pick {
+      max-width: 200px; height: 32px; padding: 0 8px; border: 1px solid var(--border);
+      border-radius: calc(var(--radius) - 2px); background: var(--card); color: inherit; font: inherit;
+    }
+    #size { font-family: "Geist Mono", ui-monospace, monospace; font-weight: 400; }
+
+    #ar-button {
+      display: none; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; height: 40px; border: 0; border-radius: calc(var(--radius) - 2px);
+      background: var(--primary); color: var(--primary-foreground);
+      font: inherit; font-weight: 500; cursor: pointer;
+    }
+    #ar-button:hover { opacity: 0.9; }
+    #qr { display: flex; align-items: center; gap: 16px; }
+    #qr h2 { margin-bottom: 4px; }
+    #qr-code {
+      flex: none; width: 104px; height: 104px; padding: 8px;
+      background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    }
+    #qr-code svg { display: block; width: 100%; height: 100%; }
+    .can-ar #ar-button { display: flex; }
+    .can-ar #qr { display: none; }
+
+    ol { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 8px; color: var(--muted-foreground); }
+    ol li { display: flex; gap: 12px; counter-increment: step; }
+    ol li::before {
+      content: counter(step); flex: none; width: 22px; height: 22px;
+      display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%;
+      color: var(--foreground); font-size: 12px; font-weight: 500;
+    }
+
+    #panel footer { padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px; }
+
+    #stage { min-height: 0; }
+    model-viewer { width: 100%; height: 100%; background: transparent; }
+    model-viewer::part(default-ar-button) { display: none; }  /* the panel has the AR button */
+
+    /* Phones: model on top, panel below, the page scrolls. */
+    @media (max-width: 767px) {
+      #app { grid-template-columns: minmax(0, 1fr); gap: 16px; height: auto; padding: 16px; }
+      #stage { order: -1; height: 48svh; }
+      #panel { max-height: none; overflow: visible; }
+      /* Keep the main action on screen while the rest of the panel scrolls under it. */
+      #ar { position: sticky; bottom: 0; margin: -12px 0; padding: 12px 0; background: var(--card); }
+    }
   </style>
 </head>
 <body>
-  <!-- Hand-made test model from glb_hello. When this becomes real map data, change src and
-       the line below (OSM models need "© OpenStreetMap contributors"). -->
-  <model-viewer src="models/hello.glb"
-                alt="Test model: a maroon block with a gold marker on one corner"
-                ar ar-modes="webxr scene-viewer quick-look"
-                camera-controls shadow-intensity="1">
-    <button slot="ar-button" id="ar-button">View in AR</button>
-  </model-viewer>
-  <footer>
-    On a phone, tap "View in AR" to place the model on a table.
-    Test model from our exporter: it should be 20 cm wide and lie flat,
-    with the gold marker on its north-east corner.
-  </footer>
+  <div id="app">
+  <main id="panel" class="card">
+    <header>
+      <span class="badge">Sprint 2 prototype</span>
+      <h1>Gopher GIS AR</h1>
+      <p class="muted">Put a 3D map model on your table with your phone's camera. No app to install.</p>
+    </header>
+
+    <section>
+      <div class="tabs" role="tablist" aria-label="Model">
+        <button role="tab" data-model="umn">Campus</button>
+        <button role="tab" data-model="building">Building</button>
+        <button role="tab" data-model="hello">Test block</button>
+      </div>
+      <dl id="facts">
+        <div><dt>Size (W × H × D)</dt><dd id="size"></dd></div>
+        <div><dt>Source</dt><dd id="source"></dd></div>
+        <div><dt>License</dt><dd id="license"></dd></div>
+        <div id="pick-row" hidden><dt><label for="pick">Building</label></dt><dd><select id="pick"></select></dd></div>
+      </dl>
+      <p id="about" class="muted"></p>
+    </section>
+
+    <section id="ar">
+      <button id="ar-button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        View in AR
+      </button>
+      <div id="qr">
+        <div id="qr-code" role="img" aria-label="QR code with this page's address"></div>
+        <div>
+          <h2>Open on your phone</h2>
+          <p class="muted">AR runs on an iPhone, or an Android phone with ARCore. Scan the code with the camera.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>How it works</h2>
+      <ol>
+        <li>Open this page on your phone and tap View in AR.</li>
+        <li>Point the camera at a table and move the phone slowly.</li>
+        <li>Drag the model to move it, pinch to resize it.</li>
+      </ol>
+    </section>
+
+    <footer class="muted">CSCI 3081 · Group 24 · University of Minnesota</footer>
+  </main>
+
+  <div id="stage">
+    <model-viewer src="models/umn.glb" alt=""
+                  ar ar-modes="webxr scene-viewer quick-look"
+                  camera-controls disable-tap camera-orbit="-35deg 70deg 170%" max-camera-orbit="auto auto 300%"
+                  touch-action="pan-y" shadow-intensity="1"></model-viewer>
+  </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <script>
+    // To add a model: put name.glb in models/, add an entry here and a tab above.
+    // Models made from OpenStreetMap data need the license "© OpenStreetMap contributors".
+    var MODELS = {
+      umn: {
+        alt: 'Buildings around Northrop Mall at the University of Minnesota, as plain blocks on a square plate',
+        about: '35 buildings, the streets and the footpaths in a 500 m square around Northrop Mall, from Northrop to ' +
+               'Coffman Union, written by our exporter at 1:1000. In AR the plate is 50 cm wide. ' +
+               'Click a building to highlight it and see its name.',
+        pick: true,   // each building is its own material, named after the building
+        source: 'OpenStreetMap',
+        sourceUrl: 'https://www.openstreetmap.org/copyright',
+        license: '\u00a9 OpenStreetMap contributors',
+        orbit: '-30deg 55deg 115%'   // flat model: look from higher up and closer
+      },
+      building: {
+        alt: '3D model of a four-storey apartment building',
+        about: 'A sample model from an open-source kit, to compare with our own output.',
+        source: 'City Kit (Commercial) by Kenney',
+        sourceUrl: 'https://kenney.nl/assets/city-kit-commercial',
+        license: 'CC0'
+      },
+      hello: {
+        alt: 'Test model: a maroon block with a gold marker on one corner',
+        about: 'Written by our GLB exporter to check scale and orientation. In AR it should be ' +
+               '20 cm wide and lie flat, with the gold marker on its north-east corner.',
+        source: 'Our exporter (glb_hello)',
+        license: 'Made by Group 24'
+      }
+    };
+
+    var viewer = document.querySelector('model-viewer');
+    var tabs = document.querySelectorAll('[data-model]');
+    var arButton = document.getElementById('ar-button');
+    var pickList = document.getElementById('pick');
+    var current;                       // key of the model on screen
+    var picked = null, pickedColor;    // highlighted building's material, and its own color
+    function byId(id) { return document.getElementById(id); }
+
+    function isBuilding(material) {
+      return ['ground', 'paths', 'roads'].indexOf(material.name) < 0;   // names set by glb_export
+    }
+
+    // Highlights one building (a material of the model) in solid UMN gold; null clears it.
+    // The highlight is part of the model, so it is also there in AR.
+    function pick(material) {
+      if (picked) picked.pbrMetallicRoughness.setBaseColorFactor(pickedColor);
+      picked = material && isBuilding(material) ? material : null;
+      if (picked) {
+        pickedColor = picked.pbrMetallicRoughness.baseColorFactor.slice();
+        // Linear RGB of #ffcc33. The alpha of 1 makes the see-through building solid.
+        picked.pbrMetallicRoughness.setBaseColorFactor([1, 0.604, 0.033, 1]);
+      }
+      pickList.value = picked ? viewer.model.materials.indexOf(picked) : '';
+    }
+
+    function show(name) {
+      var m = MODELS[name];
+      current = name;
+      picked = null;
+      byId('pick-row').hidden = true;   // until the new model has loaded
+      viewer.setAttribute('src', 'models/' + name + '.glb');
+      viewer.setAttribute('alt', m.alt);
+      viewer.setAttribute('camera-orbit', m.orbit || '-35deg 70deg 170%');
+      byId('size').textContent = '…';
+      byId('license').textContent = m.license;
+      byId('about').textContent = m.about;
+      var source = byId('source');
+      source.textContent = '';
+      var el = source.appendChild(document.createElement(m.sourceUrl ? 'a' : 'span'));
+      el.textContent = m.source;
+      if (m.sourceUrl) el.href = m.sourceUrl;
+      tabs.forEach(function (tab) { tab.setAttribute('aria-selected', tab.dataset.model === name); });
+      // Keeps the address shareable: ?model=hello opens the test block.
+      history.replaceState(null, '', name === 'umn' ? location.pathname : '?model=' + name);
+      if (window.qrcode) {
+        var qr = qrcode(0, 'M');
+        qr.addData(location.href);
+        qr.make();
+        byId('qr-code').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+      }
+    }
+
+    // Button or QR code: guess from the kind of device until model-viewer knows for sure.
+    document.body.classList.toggle('can-ar', matchMedia('(pointer: coarse)').matches);
+
+    viewer.addEventListener('load', function () {
+      var d = viewer.getDimensions();
+      byId('size').textContent = [d.x, d.y, d.z].map(function (meters) {
+        return (meters * 100).toFixed(1);
+      }).join(' × ') + ' cm';
+      document.body.classList.toggle('can-ar', viewer.canActivateAR);
+
+      // The list does the same as clicking a building, and works from the keyboard.
+      byId('pick-row').hidden = !MODELS[current].pick;
+      pickList.innerHTML = '<option value="">Click one, or choose</option>';
+      if (!MODELS[current].pick) return;
+      viewer.model.materials.map(function (material, i) {
+        return { label: material.name || 'Unnamed building', value: i, building: isBuilding(material) };
+      }).filter(function (o) { return o.building; }).sort(function (a, b) {
+        return a.label.localeCompare(b.label);
+      }).forEach(function (o) {
+        pickList.appendChild(new Option(o.label, o.value));
+      });
+    });
+    pickList.addEventListener('change', function () {
+      pick(pickList.value === '' ? null : viewer.model.materials[pickList.value]);
+    });
+    // A click picks the building under the pointer; a drag only turns the model.
+    var downX, downY;
+    viewer.addEventListener('pointerdown', function (e) { downX = e.clientX; downY = e.clientY; });
+    viewer.addEventListener('click', function (e) {
+      if (!MODELS[current].pick || !viewer.loaded) return;
+      if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) return;
+      pick(viewer.materialFromPoint(e.clientX, e.clientY));
+    });
+    arButton.addEventListener('click', function () { viewer.activateAR(); });
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () { show(tab.dataset.model); });
+    });
+
+    var asked = new URLSearchParams(location.search).get('model');
+    show(Object.prototype.hasOwnProperty.call(MODELS, asked) ? asked : 'umn');
+  </script>
 </body>
 </html>
