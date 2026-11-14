@@ -95,6 +95,15 @@
       border-radius: calc(var(--radius) - 2px); background: var(--card); color: inherit; font: inherit;
     }
     #size { font-family: "Geist Mono", ui-monospace, monospace; font-weight: 400; }
+    #building-search { margin: 12px 0; }
+    #building-search label { display: block; margin-bottom: 6px; }
+    .search-controls { display: flex; gap: 8px; }
+    #search { min-width: 0; flex: 1; font-size: 16px; }
+    #search, #clear-search {
+      padding: 8px; border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px);
+      background: var(--card); color: inherit;
+    }
+    #search-status { margin-top: 6px; }
 
     #ar-button {
       display: none; align-items: center; justify-content: center; gap: 8px;
@@ -151,6 +160,14 @@
         <button role="tab" data-model="umn">Campus</button>
         <button role="tab" data-model="building">Building</button>
         <button role="tab" data-model="hello">Test block</button>
+      </div>
+      <div id="building-search" hidden>
+        <label for="search">Search buildings</label>
+        <div class="search-controls">
+          <input id="search" type="search" placeholder="Enter a building name" aria-describedby="search-status" autocomplete="off">
+          <button id="clear-search" type="button">Clear</button>
+        </div>
+        <p id="search-status" class="muted" role="status"></p>
       </div>
       <dl id="facts">
         <div><dt>Size (W × H × D)</dt><dd id="size"></dd></div>
@@ -231,12 +248,31 @@
     var tabs = document.querySelectorAll('[data-model]');
     var arButton = document.getElementById('ar-button');
     var pickList = document.getElementById('pick');
+    var searchInput = document.getElementById('search');
+    var buildings = [];
     var current;                       // key of the model on screen
     var picked = null, pickedColor;    // highlighted building's material, and its own color
     function byId(id) { return document.getElementById(id); }
 
     function isBuilding(material) {
       return ['ground', 'paths', 'roads'].indexOf(material.name) < 0;   // names set by glb_export
+    }
+
+    function updateBuildingList() {
+      var text = searchInput.value.trim().toLowerCase();
+      var matches = buildings.filter(function (building) {
+        return building.label.toLowerCase().indexOf(text) >= 0;
+      });
+      pickList.innerHTML = '';
+      pickList.appendChild(new Option(matches.length ? 'Click one, or choose' : 'No buildings found', ''));
+      matches.forEach(function (building) {
+        // Keep the model's material index; the filtered position is different.
+        pickList.appendChild(new Option(building.label, building.value));
+      });
+      pickList.disabled = matches.length === 0;
+      byId('search-status').textContent = matches.length ?
+        matches.length + ' of ' + buildings.length + ' buildings' : 'No buildings found';
+      pickList.value = picked ? viewer.model.materials.indexOf(picked) : '';
     }
 
     // Highlights one building (a material of the model) in solid UMN gold; null clears it.
@@ -255,7 +291,12 @@
     function show(name) {
       var m = MODELS[name];
       current = name;
-      picked = null;
+      pick(null);
+      buildings = [];
+      searchInput.value = '';
+      byId('building-search').hidden = true;
+      byId('search-status').textContent = '';
+      pickList.innerHTML = '';
       byId('pick-row').hidden = true;   // until the new model has loaded
       viewer.setAttribute('src', 'models/' + name + '.glb');
       viewer.setAttribute('alt', m.alt);
@@ -291,15 +332,24 @@
 
       // The list does the same as clicking a building, and works from the keyboard.
       byId('pick-row').hidden = !MODELS[current].pick;
-      pickList.innerHTML = '<option value="">Click one, or choose</option>';
+      byId('building-search').hidden = !MODELS[current].pick;
       if (!MODELS[current].pick) return;
-      viewer.model.materials.map(function (material, i) {
+      buildings = viewer.model.materials.map(function (material, i) {
         return { label: material.name || 'Unnamed building', value: i, building: isBuilding(material) };
       }).filter(function (o) { return o.building; }).sort(function (a, b) {
         return a.label.localeCompare(b.label);
-      }).forEach(function (o) {
-        pickList.appendChild(new Option(o.label, o.value));
       });
+      updateBuildingList();
+    });
+    searchInput.addEventListener('input', function () {
+      pick(null);
+      updateBuildingList();
+    });
+    byId('clear-search').addEventListener('click', function () {
+      searchInput.value = '';
+      pick(null);
+      updateBuildingList();
+      searchInput.focus();
     });
     pickList.addEventListener('change', function () {
       pick(pickList.value === '' ? null : viewer.model.materials[pickList.value]);
@@ -310,7 +360,12 @@
     viewer.addEventListener('click', function (e) {
       if (!MODELS[current].pick || !viewer.loaded) return;
       if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) return;
-      pick(viewer.materialFromPoint(e.clientX, e.clientY));
+      var material = viewer.materialFromPoint(e.clientX, e.clientY);
+      if (material && isBuilding(material)) {
+        searchInput.value = '';
+        updateBuildingList();
+      }
+      pick(material);
     });
     arButton.addEventListener('click', function () { viewer.activateAR(); });
     tabs.forEach(function (tab) {
