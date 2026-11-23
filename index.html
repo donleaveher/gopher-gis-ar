@@ -329,8 +329,9 @@
     //   file     path of the .glb from this page, e.g. models/umn.glb
     //   title    tab label;  alt  text for screen readers;  about  the paragraph under the facts
     //   source, license, and optional sourceUrl (link on the source) and orbit (camera-orbit)
-    //   sizeMeters, scale, groupByCategory  only for models from our exporter: the options it was
-    //            run with. groupByCategory false means one mesh per building, named after it,
+    //   sizeMeters, scale, groupByCategory  only for models from our exporter: the edge of the
+    //            plate, which is wider than the square asked for when a building reaches past it,
+    //            and the options it was run with. groupByCategory false means one mesh per building, named after it,
     //            which turns on the building list, the search and click-to-highlight.
     // Models made from OpenStreetMap data need the license "© OpenStreetMap contributors".
     var models = [];                   // entries of models.json
