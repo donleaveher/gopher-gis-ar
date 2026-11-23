@@ -4,17 +4,32 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gopher GIS AR</title>
+  <script>
+    // Theme, before the page is drawn. 'system' (the default) follows the device; 'light' and
+    // 'dark' are the visitor's choice in the panel, remembered in this browser.
+    var themeChoice = 'system';
+    try { themeChoice = localStorage.getItem('theme'); } catch (e) {}   // private windows may refuse
+    if (themeChoice !== 'light' && themeChoice !== 'dark') themeChoice = 'system';
+    var systemDark = matchMedia('(prefers-color-scheme: dark)');
+    function applyTheme() {
+      document.documentElement.dataset.theme =
+        themeChoice === 'system' ? (systemDark.matches ? 'dark' : 'light') : themeChoice;
+    }
+    applyTheme();
+    systemDark.addEventListener('change', applyTheme);
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono&display=swap">
   <!-- Version pinned on purpose: bump only after re-testing on an iPhone and an Android phone. -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.4.0/model-viewer.min.js"></script>
   <style>
-    /* Black and white only, so the model is the one thing on the page with colour. Light and
-       dark follow the system setting. The model sits on a lit "table" so it has a surface even
+    /* Black and white only, so the model is the one thing on the page with colour. The dark
+       colours apply when <html> has data-theme="dark"; the script in <head> sets it from the
+       visitor's choice in the panel (System, Light or Dark). The model sits on a lit "table" so it has a surface even
        before it has loaded. Text colours were checked for WCAG AA against their surface. */
     :root {
-      color-scheme: light dark;   /* scrollbars and form controls follow the dark theme */
+      color-scheme: light;        /* scrollbars and form controls follow the theme */
       --radius: 10px;
       --bg: #FAFAFA;
       --card: #FFFFFF;
@@ -34,26 +49,25 @@
       --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 3px rgb(0 0 0 / 0.08);
       --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.04), 0 12px 32px -8px rgb(0 0 0 / 0.14);
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0A0A0A;
-        --card: #141414;
-        --foreground: #FAFAFA;
-        --muted-foreground: #A3A3A3;    /* 7.3:1 on --card */
-        --muted: #1F1F1F;
-        --tab-active: #2E2E2E;
-        --tab-active-text: #FFFFFF;
-        --border: rgb(255 255 255 / 0.1);
-        --input-border: #6E6E6E;        /* 3.6:1 */
-        --primary: #FAFAFA;
-        --primary-foreground: #0A0A0A;
-        --ring: #FAFAFA;
-        --table: radial-gradient(ellipse 70% 60% at 50% 55%, #2C2C2C 0%, #161616 60%, #0A0A0A 100%);
-        --grid: rgb(255 255 255 / 0.05);
-        --grid-major: rgb(255 255 255 / 0.09);
-        --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-        --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.2), 0 16px 40px -8px rgb(0 0 0 / 0.6);
-      }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0A0A0A;
+      --card: #141414;
+      --foreground: #FAFAFA;
+      --muted-foreground: #A3A3A3;    /* 7.3:1 on --card */
+      --muted: #1F1F1F;
+      --tab-active: #2E2E2E;
+      --tab-active-text: #FFFFFF;
+      --border: rgb(255 255 255 / 0.1);
+      --input-border: #6E6E6E;        /* 3.6:1 */
+      --primary: #FAFAFA;
+      --primary-foreground: #0A0A0A;
+      --ring: #FAFAFA;
+      --table: radial-gradient(ellipse 70% 60% at 50% 55%, #2C2C2C 0%, #161616 60%, #0A0A0A 100%);
+      --grid: rgb(255 255 255 / 0.05);
+      --grid-major: rgb(255 255 255 / 0.09);
+      --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+      --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.2), 0 16px 40px -8px rgb(0 0 0 / 0.6);
     }
 
     * { box-sizing: border-box; }
@@ -132,7 +146,7 @@
     #pick:empty { visibility: hidden; }   /* no options until the model has loaded; keeps its place */
     #search-status { margin-top: 8px; min-height: 1.5em; font-size: 13px; }   /* keeps its line while it is empty */
     @media (pointer: coarse) {
-      .tabs button, #search, #clear-search, #pick, #ar-button { height: auto; min-height: 44px; }
+      .tabs button, #search, #clear-search, #pick, #ar-button, .segments label { height: auto; min-height: 44px; }
       #search, #pick { font-size: 16px; }   /* under 16px iOS zooms in on focus */
     }
 
@@ -156,7 +170,7 @@
     #qr[open] summary::after { rotate: 225deg; margin-bottom: -3px; }
     #qr h2 { margin: 0; font-size: 15px; }
     #qr-body { display: flex; align-items: center; gap: 16px; margin-top: 12px; }
-    #qr p { font-size: 13px; }
+    #qr p, #needs { font-size: 13px; }
     #qr-code {
       flex: none; width: 112px; height: 112px; padding: 8px;
       background: #fff; border: 1px solid var(--border); border-radius: 10px;
@@ -172,6 +186,19 @@
       display: grid; place-items: center; border-radius: 50%;
       background: var(--muted); border: 1px solid var(--border); color: var(--foreground); font-size: 12px; font-weight: 600;
     }
+
+    /* System / Light / Dark: radio buttons drawn as one segmented control. */
+    #theme { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    #theme-label { font-weight: 600; }
+    .segments { display: flex; padding: 4px; background: var(--muted); border-radius: 12px; }
+    .segments label {
+      position: relative; display: grid; place-items: center; height: 30px; padding: 0 12px; border-radius: 8px;
+      color: var(--muted-foreground); font-weight: 500; cursor: pointer;
+    }
+    .segments input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }   /* still gets the keyboard */
+    .segments label:hover { color: var(--foreground); }
+    .segments label:has(:checked) { background: var(--tab-active); color: var(--tab-active-text); font-weight: 600; box-shadow: var(--shadow-sm); }
+    .segments label:has(:focus-visible) { outline: 2px solid var(--ring); outline-offset: -2px; }
 
     #panel footer { padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px; }
 
@@ -226,11 +253,14 @@
       body:not(.can-ar) #qr {
         /* Top right: the plate is a diamond on screen, so that corner is free; z-index puts it
            over #stage, which comes later. */
-        position: absolute; z-index: 1; right: 16px; top: 16px; width: 330px; padding: 14px; visibility: visible;
-        background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-lg);
+        position: absolute; z-index: 1; right: 16px; top: 16px; width: 236px; padding: 12px; visibility: visible;
+        background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg);
       }
-      body:not(.can-ar) #qr:not([open]) { width: auto; padding: 10px 14px; }   /* closed: just its heading */
-      body:not(.can-ar) #qr-code { width: 116px; height: 116px; }
+      body:not(.can-ar) #qr:not([open]) { width: auto; padding: 8px 12px; }   /* closed: just its heading */
+      body:not(.can-ar) #qr h2 { font-size: 13px; }
+      body:not(.can-ar) #qr-body { gap: 12px; margin-top: 10px; }
+      body:not(.can-ar) #qr p { font-size: 12px; line-height: 1.4; }
+      body:not(.can-ar) #qr-code { width: 92px; height: 92px; padding: 6px; border-radius: 8px; }
     }
 
     /* Phones: model on top, edge to edge, and the panel as a sheet over its lower edge. */
@@ -292,7 +322,7 @@
         <summary><h2 id="qr-title">Open on your phone</h2></summary>
         <div id="qr-body">
           <div id="qr-code" role="img" aria-label="QR code with this page's address"></div>
-          <p class="muted">AR needs Safari on an iPhone, or Chrome on an Android phone with ARCore. Scan the code with the phone's camera to open this page there.</p>
+          <p class="muted">Scan with your phone's camera to open this page there.</p>
         </div>
       </details>
     </section>
@@ -304,7 +334,17 @@
         <li>Point the camera at a table and move the phone slowly.</li>
         <li>Drag the model to move it, pinch to resize it.</li>
       </ol>
+      <p class="muted" id="needs">AR needs Safari on an iPhone, or Chrome on an Android phone with ARCore.</p>
     </section>
+
+    <div id="theme" role="radiogroup" aria-labelledby="theme-label">
+      <span id="theme-label">Appearance</span>
+      <div class="segments">
+        <label><input type="radio" name="theme" value="system" checked>System</label>
+        <label><input type="radio" name="theme" value="light">Light</label>
+        <label><input type="radio" name="theme" value="dark">Dark</label>
+      </div>
+    </div>
 
     <footer class="muted">CSCI 3081 · Group 24 · University of Minnesota</footer>
   </main>
@@ -496,6 +536,14 @@
       pick(material);
     });
     arButton.addEventListener('click', function () { viewer.activateAR(); });
+    [].forEach.call(document.querySelectorAll('input[name="theme"]'), function (radio) {
+      radio.checked = radio.value === themeChoice;
+      radio.addEventListener('change', function () {
+        themeChoice = radio.value;
+        try { localStorage.setItem('theme', themeChoice); } catch (e) {}
+        applyTheme();
+      });
+    });
     byId('panel-toggle').addEventListener('click', function () {
       var hidden = document.body.classList.toggle('no-panel');
       this.setAttribute('aria-expanded', !hidden);
