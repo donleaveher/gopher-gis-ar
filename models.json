@@ -1,0 +1,63 @@
+[
+  {
+    "id": "umn",
+    "file": "models/umn.glb",
+    "title": "Campus",
+    "alt": "Buildings around Northrop Mall at the University of Minnesota, as plain blocks on a square plate",
+    "about": "35 buildings, the streets and the footpaths in a 500 m square around Northrop Mall, from Northrop to Coffman Union, written by our exporter at 1:1000. In AR the plate is 50 cm wide. Click a building to highlight it and see its name.",
+    "source": "OpenStreetMap",
+    "sourceUrl": "https://www.openstreetmap.org/copyright",
+    "license": "© OpenStreetMap contributors",
+    "orbit": "-30deg 55deg 115%",
+    "sizeMeters": 500,
+    "scale": 0.001,
+    "groupByCategory": false
+  },
+  {
+    "id": "umn-terrain",
+    "file": "models/umn-terrain.glb",
+    "title": "Terrain",
+    "alt": "The area around Northrop Mall at the University of Minnesota on ground that follows the terrain, with buildings, streets and footpaths each in one colour",
+    "about": "The same 500 m square around Northrop Mall, with the ground shaped by USGS elevation data, written by our exporter at 1:1000. In AR the plate is 50 cm wide. Each kind of feature has one colour: ground, roads, footpaths and buildings, so buildings cannot be picked one by one.",
+    "source": "OpenStreetMap",
+    "sourceUrl": "https://www.openstreetmap.org/copyright",
+    "license": "© OpenStreetMap contributors",
+    "orbit": "-30deg 55deg 115%",
+    "sizeMeters": 500,
+    "scale": 0.001,
+    "groupByCategory": true
+  },
+  {
+    "id": "coffman",
+    "file": "models/coffman.glb",
+    "title": "Coffman",
+    "alt": "Coffman Memorial Union at the University of Minnesota as one plain block, on a square of ground with the streets and footpaths around it",
+    "about": "One building on its own: Coffman Memorial Union with the ground, streets and footpaths up to 30 m around it, found by name and written by our exporter at 1:306. In AR the plate is 50 cm wide.",
+    "source": "OpenStreetMap",
+    "sourceUrl": "https://www.openstreetmap.org/copyright",
+    "license": "© OpenStreetMap contributors",
+    "orbit": "-30deg 55deg 115%",
+    "sizeMeters": 153,
+    "scale": 0.003264,
+    "groupByCategory": false
+  },
+  {
+    "id": "building",
+    "file": "models/building.glb",
+    "title": "Building",
+    "alt": "3D model of a four-storey apartment building",
+    "about": "A sample model from an open-source kit, to compare with our own output.",
+    "source": "City Kit (Commercial) by Kenney",
+    "sourceUrl": "https://kenney.nl/assets/city-kit-commercial",
+    "license": "CC0"
+  },
+  {
+    "id": "hello",
+    "file": "models/hello.glb",
+    "title": "Test block",
+    "alt": "Test model: a maroon block with a gold marker on one corner",
+    "about": "Written by our GLB exporter to check scale and orientation. In AR it should be 20 cm wide and lie flat, with the gold marker on its north-east corner.",
+    "source": "Our exporter (glb_hello)",
+    "license": "Made by Group 24"
+  }
+]
