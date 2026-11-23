@@ -17,6 +17,11 @@
     }
     applyTheme();
     systemDark.addEventListener('change', applyTheme);
+    // The panel's width, if the visitor dragged its edge before (see #panel-resize).
+    try {
+      var savedWidth = parseInt(localStorage.getItem('panelWidth'), 10);
+      if (savedWidth >= 300 && savedWidth <= 640) document.documentElement.style.setProperty('--panel-w', savedWidth + 'px');
+    } catch (e) {}
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -78,8 +83,14 @@
     /* One surface: the panel is a sidebar on the left edge and the model view fills the rest.
        The grid is on #app, not on body: browser extensions add their own elements to
        body, and as grid items those pushed the panel and the model into the wrong cells.
-       position: relative lets the QR card sit on the model view (see the wide-screen rule). */
-    #app { position: relative; display: grid; grid-template-columns: 380px minmax(0, 1fr); height: 100dvh; }
+       position: relative lets the QR card sit on the model view (see the wide-screen rule).
+       --panel-w is the width the visitor chose by dragging the panel's edge. The column's width
+       is animated, which is what slides the panel in and out. */
+    #app {
+      --panel: min(var(--panel-w, 380px), 60vw);
+      position: relative; display: grid; grid-template-columns: var(--panel) minmax(0, 1fr); height: 100dvh;
+      transition: grid-template-columns 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
     a { color: inherit; text-underline-offset: 4px; text-decoration-color: var(--input-border); }
     a:hover { text-decoration-color: currentColor; }
     :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
@@ -89,7 +100,21 @@
       display: flex; flex-direction: column; gap: 28px; padding: 28px 24px 20px;
       min-height: 0; overflow-y: auto; scrollbar-width: thin;
       background: var(--card); border-right: 1px solid var(--border);
+      /* Its own width, kept at the column's right edge: while the column closes the panel
+         slides out to the left whole, instead of being squeezed. */
+      width: var(--panel); justify-self: end;
     }
+    /* The panel's right edge: drag it, or focus it and press the arrow keys, to resize the panel. */
+    #panel-resize {
+      position: absolute; z-index: 2; top: 0; bottom: 0; left: calc(var(--panel) - 5px); width: 10px;
+      cursor: col-resize; touch-action: none; outline: none;
+    }
+    #panel-resize::after {
+      content: ""; position: absolute; inset: 0 4px; background: var(--ring); opacity: 0; transition: opacity 0.15s;
+    }
+    #panel-resize:hover::after, #panel-resize:focus-visible::after, .resizing #panel-resize::after { opacity: 0.45; }
+    .resizing { cursor: col-resize; user-select: none; -webkit-user-select: none; }
+    .resizing #app { transition: none; }
     #panel > section { display: grid; gap: 16px; }
     /* Title first, the sprint badge beside it (it is a status, not a heading). */
     #panel header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
@@ -160,16 +185,23 @@
     #ar-button svg { width: 20px; height: 20px; }
     #ar-button:hover { opacity: 0.88; }
     #ar-button:disabled { opacity: 0.6; cursor: progress; box-shadow: none; }
-    /* A <details>: its heading opens and closes it. */
-    #qr summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; border-radius: 6px; }
-    #qr summary::-webkit-details-marker { display: none; }
-    #qr summary::after {   /* chevron: points down when closed, up when open */
-      content: ""; flex: none; width: 7px; height: 7px; margin: 0 4px 3px;
-      border: solid currentColor; border-width: 0 1.5px 1.5px 0; rotate: 45deg; transition: rotate 0.15s;
-    }
-    #qr[open] summary::after { rotate: 225deg; margin-bottom: -3px; }
+    /* Its heading is a button that opens and closes it. The body is a grid row that goes
+       between 1fr and 0fr, which is what animates the height. */
     #qr h2 { margin: 0; font-size: 15px; }
-    #qr-body { display: flex; align-items: center; gap: 16px; margin-top: 12px; }
+    #qr-toggle {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 0;
+      border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+    }
+    #qr-toggle::after {   /* chevron: points down when closed, up when open */
+      content: ""; flex: none; width: 7px; height: 7px; margin: 0 4px 3px;
+      border: solid currentColor; border-width: 0 1.5px 1.5px 0; rotate: 45deg; transition: rotate 0.3s, margin 0.3s;
+    }
+    #qr-toggle[aria-expanded="true"]::after { rotate: 225deg; margin-bottom: -3px; }
+    #qr-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+    #qr-body > div { display: flex; align-items: center; gap: 16px; min-height: 0; overflow: hidden; transition: opacity 0.2s; }
+    #qr-body > div > * { margin-top: 12px; }   /* inside the clipped row, so it closes with it */
+    #qr.closed #qr-body { grid-template-rows: 0fr; }
+    #qr.closed #qr-body > div { opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0s 0.3s; }
     #qr p, #needs { font-size: 13px; }
     #qr-code {
       flex: none; width: 112px; height: 112px; padding: 8px;
@@ -225,8 +257,9 @@
     @media (min-width: 768px) {
       /* visibility, not display: on wide screens the QR card lives in the panel but sits on the
          model view, and stays when the panel is hidden. */
-      .no-panel #app { grid-template-columns: 0 minmax(0, 1fr); }
-      .no-panel #panel { visibility: hidden; padding: 0; border: 0; }
+      .no-panel #app { grid-template-columns: 0px minmax(0, 1fr); }
+      .no-panel #panel { visibility: hidden; transition: visibility 0s 0.3s; }   /* once it has slid out */
+      .no-panel #panel-resize { display: none; }
     }
     model-viewer {
       width: 100%; height: 100%; background: transparent; transition: opacity 0.2s;
@@ -246,7 +279,7 @@
     model-viewer::part(default-ar-button) { display: none; }  /* the panel has the AR button */
 
     /* Wide screens: the QR code is how a visitor at a computer gets to AR, so it sits on the
-       model view as its own card instead of halfway down the panel; closed, it is a small pill. Its containing block is
+       model view as its own card instead of halfway down the panel; closed, only its heading is left. Its containing block is
        #app, so the panel's scrolling does not clip it. */
     @media (min-width: 1100px) {
       body:not(.can-ar) #ar { display: contents; }
@@ -256,9 +289,9 @@
         position: absolute; z-index: 1; right: 16px; top: 16px; width: 236px; padding: 12px; visibility: visible;
         background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg);
       }
-      body:not(.can-ar) #qr:not([open]) { width: auto; padding: 8px 12px; }   /* closed: just its heading */
       body:not(.can-ar) #qr h2 { font-size: 13px; }
-      body:not(.can-ar) #qr-body { gap: 12px; margin-top: 10px; }
+      body:not(.can-ar) #qr-body > div { gap: 12px; }
+      body:not(.can-ar) #qr-body > div > * { margin-top: 10px; }
       body:not(.can-ar) #qr p { font-size: 12px; line-height: 1.4; }
       body:not(.can-ar) #qr-code { width: 92px; height: 92px; padding: 6px; border-radius: 8px; }
     }
@@ -267,11 +300,11 @@
     @media (max-width: 767px) {
       #app { grid-template-columns: minmax(0, 1fr); height: auto; }
       #stage { order: -1; height: 52svh; }
-      #panel-toggle { display: none; }   /* the panel is the page here, under the model */
+      #panel-toggle, #panel-resize { display: none; }   /* the panel is the page here, under the model */
       #note { bottom: 36px; }   /* above the sheet's rounded edge */
       #panel {
         position: relative; margin-top: -20px; padding: 24px 20px 20px; gap: 24px;
-        overflow: visible;
+        width: auto; justify-self: stretch; overflow: visible;
         border-right: 0; border-top: 1px solid var(--border); border-radius: 20px 20px 0 0;
         box-shadow: 0 -8px 24px -12px rgb(0 0 0 / 0.2);
       }
@@ -281,6 +314,9 @@
         position: sticky; bottom: 0; z-index: 1; margin: -12px -20px; padding: 12px 20px;
         background: var(--card); box-shadow: 0 -10px 16px -12px rgb(0 0 0 / 0.25);
       }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #app, #qr-body, #qr-toggle::after, .no-panel #panel, #qr.closed #qr-body > div { transition: none; }
     }
   </style>
 </head>
@@ -318,13 +354,13 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
         View in AR
       </button>
-      <details id="qr" open>
-        <summary><h2 id="qr-title">Open on your phone</h2></summary>
-        <div id="qr-body">
+      <div id="qr">
+        <h2><button id="qr-toggle" type="button" aria-expanded="true" aria-controls="qr-body"><span id="qr-title">Open on your phone</span></button></h2>
+        <div id="qr-body"><div>
           <div id="qr-code" role="img" aria-label="QR code with this page's address"></div>
           <p class="muted">Scan with your phone's camera to open this page there.</p>
-        </div>
-      </details>
+        </div></div>
+      </div>
     </section>
 
     <section>
@@ -348,6 +384,9 @@
 
     <footer class="muted">CSCI 3081 · Group 24 · University of Minnesota</footer>
   </main>
+
+  <div id="panel-resize" role="separator" aria-orientation="vertical" aria-label="Panel width" aria-controls="panel"
+       aria-valuemin="300" aria-valuemax="640" tabindex="0"></div>
 
   <div id="stage">
     <button id="panel-toggle" type="button" aria-controls="panel" aria-expanded="true" aria-label="Hide the panel" title="Hide the panel">
@@ -543,6 +582,32 @@
         try { localStorage.setItem('theme', themeChoice); } catch (e) {}
         applyTheme();
       });
+    });
+    byId('qr-toggle').addEventListener('click', function () {
+      this.setAttribute('aria-expanded', !byId('qr').classList.toggle('closed'));
+    });
+    // The panel's right edge. Its width is --panel-w on <html>, read by the grid in #app.
+    var resizer = byId('panel-resize');
+    function setPanelWidth(width) {
+      width = Math.max(300, Math.min(640, Math.round(width)));
+      document.documentElement.style.setProperty('--panel-w', width + 'px');
+      resizer.setAttribute('aria-valuenow', width);
+      try { localStorage.setItem('panelWidth', width); } catch (e) {}
+    }
+    resizer.setAttribute('aria-valuenow', byId('panel').offsetWidth);
+    resizer.addEventListener('pointerdown', function (e) {
+      resizer.setPointerCapture(e.pointerId);   // keeps the drag when the pointer leaves the thin edge
+      document.body.classList.add('resizing');
+    });
+    resizer.addEventListener('pointermove', function (e) {
+      if (resizer.hasPointerCapture(e.pointerId)) setPanelWidth(e.clientX);
+    });
+    resizer.addEventListener('lostpointercapture', function () { document.body.classList.remove('resizing'); });
+    resizer.addEventListener('keydown', function (e) {
+      var step = { ArrowRight: 16, ArrowLeft: -16 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      setPanelWidth(byId('panel').offsetWidth + step);
     });
     byId('panel-toggle').addEventListener('click', function () {
       var hidden = document.body.classList.toggle('no-panel');
