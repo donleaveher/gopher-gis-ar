@@ -10,44 +10,43 @@
   <!-- Version pinned on purpose: bump only after re-testing on an iPhone and an Android phone. -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.4.0/model-viewer.min.js"></script>
   <style>
-    /* "Campus map table": warm paper, UMN maroon (#7A0019) for actions and the current
-       choice, UMN gold (#FFCC33) only in small accents, the same gold as a picked building.
-       The model sits on a lit "table" so it has a surface even before it has loaded.
-       Text colours were checked for WCAG AA against the surface they sit on. */
+    /* Black and white only, so the model is the one thing on the page with colour. Light and
+       dark follow the system setting. The model sits on a lit "table" so it has a surface even
+       before it has loaded. Text colours were checked for WCAG AA against their surface. */
     :root {
       color-scheme: light dark;   /* scrollbars and form controls follow the dark theme */
       --radius: 10px;
-      --bg: #F6F1EB;
-      --card: #FFFDFA;
-      --foreground: #22181A;
-      --muted-foreground: #6B5C5E;      /* 6.2:1 on --card */
-      --muted: #EFE7E0;                 /* tab row */
-      --tab-active: #FFFDFA;
-      --tab-active-text: #7A0019;
-      --border: #E6DCD3;
-      --input-border: #9A8984;          /* 3.3:1, so the field edges are visible */
-      --primary: #7A0019;
-      --primary-foreground: #FFFFFF;    /* 11.4:1 */
-      --gold: #FFCC33;
-      --ring: #7A0019;
-      --table: radial-gradient(ellipse 70% 60% at 50% 55%, #FFFFFF 0%, #F4EDE5 55%, #E9DFD4 100%);
-      --shadow-sm: 0 1px 2px rgb(60 20 25 / 0.06), 0 1px 3px rgb(60 20 25 / 0.08);
-      --shadow-lg: 0 2px 4px rgb(60 20 25 / 0.04), 0 12px 32px -8px rgb(60 20 25 / 0.18);
+      --bg: #FAFAFA;
+      --card: #FFFFFF;
+      --foreground: #0A0A0A;
+      --muted-foreground: #6B6B6B;      /* 5.3:1 on --card */
+      --muted: #F2F2F2;                 /* tab row */
+      --tab-active: #FFFFFF;
+      --tab-active-text: #0A0A0A;
+      --border: #E5E5E5;
+      --input-border: #8F8F8F;          /* 3.2:1, so the field edges are visible */
+      --primary: #0A0A0A;
+      --primary-foreground: #FFFFFF;
+      --ring: #0A0A0A;
+      --table: radial-gradient(ellipse 70% 60% at 50% 55%, #FFFFFF 0%, #F5F5F5 55%, #EBEBEB 100%);
+      --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 3px rgb(0 0 0 / 0.08);
+      --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.04), 0 12px 32px -8px rgb(0 0 0 / 0.14);
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #120D0E;
-        --card: #1C1517;
-        --foreground: #F4ECEC;
-        --muted-foreground: #B3A3A6;    /* 7.5:1 on --card */
-        --muted: #2A2124;
-        --tab-active: #3A2F32;
-        --tab-active-text: #FFCC33;     /* 8.5:1 */
-        --border: rgb(255 255 255 / 0.09);
-        --input-border: #75656A;        /* 3.3:1 */
-        --primary: #A11D38;             /* white on it is 7.6:1 */
-        --ring: #FFCC33;
-        --table: radial-gradient(ellipse 70% 60% at 50% 55%, #33282B 0%, #1E1719 60%, #150F11 100%);
+        --bg: #0A0A0A;
+        --card: #141414;
+        --foreground: #FAFAFA;
+        --muted-foreground: #A3A3A3;    /* 7.3:1 on --card */
+        --muted: #1F1F1F;
+        --tab-active: #2E2E2E;
+        --tab-active-text: #FFFFFF;
+        --border: rgb(255 255 255 / 0.1);
+        --input-border: #6E6E6E;        /* 3.6:1 */
+        --primary: #FAFAFA;
+        --primary-foreground: #0A0A0A;
+        --ring: #FAFAFA;
+        --table: radial-gradient(ellipse 70% 60% at 50% 55%, #2A2A2A 0%, #161616 60%, #0D0D0D 100%);
         --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
         --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.2), 0 16px 40px -8px rgb(0 0 0 / 0.6);
       }
@@ -58,7 +57,6 @@
       margin: 0; background: var(--bg); color: var(--foreground);
       font: 14px/1.5 Geist, system-ui, sans-serif; -webkit-font-smoothing: antialiased;
     }
-    ::selection { background: rgb(255 204 51 / 0.45); color: inherit; }
     /* The grid is on #app, not on body: browser extensions add their own elements to
        body, and as grid items those pushed the panel and the model into the wrong cells.
        position: relative lets the QR card sit on the model view (see the wide-screen rule). */
@@ -66,7 +64,7 @@
       position: relative; display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 20px;
       height: 100dvh; padding: 20px;
     }
-    a { color: inherit; text-underline-offset: 4px; text-decoration-color: var(--gold); text-decoration-thickness: 2px; }
+    a { color: inherit; text-underline-offset: 4px; text-decoration-color: var(--input-border); }
     a:hover { text-decoration-color: currentColor; }
     :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
     [hidden] { display: none !important; }
@@ -90,7 +88,7 @@
       background: var(--muted); border-radius: 999px;
       color: var(--muted-foreground); font-size: 12px; font-weight: 500;
     }
-    .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+    .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--foreground); }
     h1 { margin: 0; font-size: 28px; font-weight: 600; line-height: 1.1; letter-spacing: -0.025em; }
     h2 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
     .muted { margin: 0; color: var(--muted-foreground); }
@@ -145,13 +143,21 @@
       width: 100%; height: 48px; border: 0; border-radius: 12px;
       background: var(--primary); color: var(--primary-foreground);
       font: inherit; font-size: 16px; font-weight: 600; cursor: pointer;
-      box-shadow: 0 1px 2px rgb(0 0 0 / 0.1), 0 8px 20px -8px rgb(122 0 25 / 0.6);
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.1), 0 8px 20px -8px rgb(0 0 0 / 0.35);
     }
     #ar-button svg { width: 20px; height: 20px; }
-    #ar-button:hover { filter: brightness(1.12); }
+    #ar-button:hover { opacity: 0.88; }
     #ar-button:disabled { opacity: 0.6; cursor: progress; box-shadow: none; }
-    #qr { display: flex; align-items: center; gap: 16px; }
-    #qr h2 { margin-bottom: 4px; font-size: 15px; }
+    /* A <details>: its heading opens and closes it. */
+    #qr summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; border-radius: 6px; }
+    #qr summary::-webkit-details-marker { display: none; }
+    #qr summary::after {   /* chevron: points down when closed, up when open */
+      content: ""; flex: none; width: 7px; height: 7px; margin: 0 4px 3px;
+      border: solid currentColor; border-width: 0 1.5px 1.5px 0; rotate: 45deg; transition: rotate 0.15s;
+    }
+    #qr[open] summary::after { rotate: 225deg; margin-bottom: -3px; }
+    #qr h2 { margin: 0; font-size: 15px; }
+    #qr-body { display: flex; align-items: center; gap: 16px; margin-top: 12px; }
     #qr p { font-size: 13px; }
     #qr-code {
       flex: none; width: 112px; height: 112px; padding: 8px;
@@ -166,7 +172,7 @@
     ol li::before {
       content: counter(step); flex: none; width: 22px; height: 22px;
       display: grid; place-items: center; border-radius: 50%;
-      background: var(--gold); color: #22181A; font-size: 12px; font-weight: 600;   /* 11.5:1 */
+      background: var(--muted); border: 1px solid var(--border); color: var(--foreground); font-size: 12px; font-weight: 600;
     }
 
     #panel footer { padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px; }
@@ -194,7 +200,7 @@
     model-viewer::part(default-ar-button) { display: none; }  /* the panel has the AR button */
 
     /* Wide screens: the QR code is how a visitor at a computer gets to AR, so it sits on the
-       model view as its own card instead of halfway down the panel. Its containing block is
+       model view as its own card instead of halfway down the panel; closed, it is a small pill. Its containing block is
        #app, so the panel's scrolling does not clip it. */
     @media (min-width: 1100px) {
       body:not(.can-ar) #ar { display: contents; }
@@ -204,6 +210,7 @@
         position: absolute; z-index: 1; right: 36px; top: 36px; width: 330px; padding: 14px;
         background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-lg);
       }
+      body:not(.can-ar) #qr:not([open]) { width: auto; padding: 10px 14px; }   /* closed: just its heading */
       body:not(.can-ar) #qr-code { width: 116px; height: 116px; }
     }
 
@@ -261,13 +268,13 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
         View in AR
       </button>
-      <div id="qr">
-        <div id="qr-code" role="img" aria-label="QR code with this page's address"></div>
-        <div>
-          <h2 id="qr-title">Open on your phone</h2>
+      <details id="qr" open>
+        <summary><h2 id="qr-title">Open on your phone</h2></summary>
+        <div id="qr-body">
+          <div id="qr-code" role="img" aria-label="QR code with this page's address"></div>
           <p class="muted">AR needs Safari on an iPhone, or Chrome on an Android phone with ARCore. Scan the code with the phone's camera to open this page there.</p>
         </div>
-      </div>
+      </details>
     </section>
 
     <section>
